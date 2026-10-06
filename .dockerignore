@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+**/securitylogs.db*
+.git/
+.vs/
+TestResults/

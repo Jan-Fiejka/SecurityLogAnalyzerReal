@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security Log Analyzer</title>
+  <style>
+    :root { color-scheme:light; --ink:#172536; --muted:#637383; --line:#cbd6df; --paper:#eaf0f4; --surface:#f8fafb; --accent:#176b78; --green:#287052; --red:#a33c3b; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; color:var(--ink); background:linear-gradient(135deg,#e7eef3 0%,#f3f6f7 56%,#e6efed 100%); font:15px/1.5 Arial,sans-serif; }
+    main { width:min(1180px,92%); margin:0 auto; padding:34px 0 70px; }
+    header { display:flex; justify-content:space-between; gap:24px; align-items:end; margin-bottom:24px; }
+    h1,h2,p { margin-top:0; } h1 { margin-bottom:8px; font:700 clamp(2rem,5vw,4.4rem)/.95 Georgia,serif; letter-spacing:-.04em; } h2 { margin-bottom:12px; font:700 1.25rem Georgia,serif; }
+    .eyebrow { margin:0 0 9px; color:var(--accent); font:700 .7rem/1.2 Arial,sans-serif; letter-spacing:.15em; text-transform:uppercase; }
+    .panel { padding:22px; background:var(--surface); border:1px solid var(--line); border-radius:3px; }
+    .login { max-width:430px; margin:34px auto; border-top:5px solid var(--accent); } label { display:block; margin:16px 0 6px; font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; } input,button { width:100%; padding:12px 14px; border-radius:3px; font:inherit; } input { border:1px solid var(--line); background:#fff; } button { border:0; color:#fff; background:#203746; cursor:pointer; font-weight:700; } button:hover { background:var(--accent); }
+    .hint { color:var(--muted); font-size:.9rem; margin-top:18px; } .error { color:var(--red); } .success { color:var(--green); }
+    .dashboard { display:none; } .actions { display:flex; gap:8px; } .actions button { width:auto; margin:0; padding:10px 14px; }
+    .stats { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; margin:26px 0; background:var(--line); border:1px solid var(--line); } .stat { padding:16px; border:0; border-radius:0; } .stat strong { display:block; font:700 2rem Georgia,serif; } .stat span { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; }
+    .grid { display:grid; grid-template-columns:1.05fr 1.5fr; gap:18px; } .table-wrap { overflow:auto; } table { width:100%; border-collapse:collapse; font-size:13px; } th,td { text-align:left; padding:12px 8px; border-bottom:1px solid var(--line); white-space:nowrap; } th { color:var(--muted); font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; } .badge { display:inline-block; padding:3px 7px; border-radius:2px; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; } .ok { color:var(--green); background:#dcebe2; } .bad { color:var(--red); background:#f3dcd7; }
+    .rule-strip { display:flex; flex-wrap:wrap; gap:8px; padding:12px 0 18px; border-bottom:1px solid var(--line); margin-bottom:15px; } .rule-strip span { color:var(--muted); font-size:.75rem; } .rule-strip strong { color:var(--ink); }
+    .pattern { padding:12px 0; border-bottom:1px solid var(--line); } .pattern:last-child { border-bottom:0; } .pattern strong { margin-right:6px; } .pattern small { display:block; margin-top:4px; color:var(--muted); }
+    @media (max-width:760px) { main { padding-top:24px; } header { display:block; } .actions { margin-top:18px; flex-wrap:wrap; } .stats { grid-template-columns:repeat(2,1fr); } .grid { grid-template-columns:1fr; } .stats .stat:last-child { grid-column:span 2; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header><div><p class="eyebrow">Security Log Analyzer</p><h1>Login-Analyse</h1></div></header>
+    <section class="panel login" id="loginPanel">
+      <h2>Anmelden</h2><p id="message" class="hint">Testzugänge: anna/test1, ben/test2, cara/test3</p>
+      <form id="loginForm"><label for="username">Benutzername</label><input id="username" autocomplete="username" required><label for="password">Passwort</label><input id="password" type="password" autocomplete="current-password" required><button type="submit">Login prüfen</button></form>
+    </section>
+    <section class="dashboard" id="dashboard">
+      <header><div><p class="eyebrow">Security Log Analyzer / Übersicht</p><h2>Dashboard</h2></div><div class="actions"><button id="refresh">Aktualisieren</button><button id="reset" style="background:#963b3b">Ereignisse zurücksetzen</button></div></header>
+      <div class="stats"><div class="panel stat"><strong id="total">0</strong><span>Versuche gesamt</span></div><div class="panel stat"><strong id="successes">0</strong><span>Erfolgreiche Logins</span></div><div class="panel stat"><strong id="failures">0</strong><span>Fehlversuche</span></div><div class="panel stat"><strong id="suspicious">0</strong><span>Verdächtige Nutzer</span></div><div class="panel stat"><strong id="suspiciousIps">0</strong><span>Verdächtige IPs</span></div></div>
+      <div class="grid"><section class="panel"><h2>Verdächtige Muster</h2><div class="rule-strip"><span><strong>medium</strong> ab 3 Fehlern</span><span><strong>high</strong> ab 5 / 10 min</span><span><strong>IP</strong> Quelle und Benutzer</span></div><div id="patterns" class="hint">Keine Auffälligkeiten.</div></section><section class="panel"><h2>Letzte Ereignisse</h2><div class="table-wrap"><table><thead><tr><th>Zeit</th><th>Nutzer</th><th>IP</th><th>Status</th></tr></thead><tbody id="logs"></tbody></table></div></section></div>
+    </section>
+  </main>
+  <script>
+    const $ = id => document.getElementById(id);
+    async function loadDashboard() {
+      const [analysis, logs] = await Promise.all([fetch('/api/analysis').then(r => r.json()), fetch('/api/logs?limit=50').then(r => r.json())]);
+      $('total').textContent = analysis.totalAttempts; $('successes').textContent = analysis.successfulLogins; $('failures').textContent = analysis.failedLogins; $('suspicious').textContent = analysis.suspiciousUsers; $('suspiciousIps').textContent = analysis.suspiciousIps;
+      $('patterns').innerHTML = analysis.patterns.length ? analysis.patterns.map(p => `<div class="pattern"><strong>${p.subject}</strong> <span class="badge ${p.severity === 'high' ? 'bad' : 'ok'}">${p.severity}</span><small>${p.reason} · ${p.eventCount} Ereignisse</small></div>`).join('') : 'Keine Auffälligkeiten.';
+      $('logs').innerHTML = logs.map(log => `<tr><td>${new Date(log.occurredAtUtc).toLocaleString('de-DE')}</td><td>${log.username}</td><td>${log.ipAddress}</td><td><span class="badge ${log.succeeded ? 'ok' : 'bad'}">${log.succeeded ? 'Erfolg' : 'Fehlgeschlagen'}</span></td></tr>`).join('');
+    }
+    $('loginForm').addEventListener('submit', async event => { event.preventDefault(); const response = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ username:$('username').value, password:$('password').value }) }); const result = await response.json(); $('message').textContent = result.message; $('message').className = response.ok ? 'hint success' : 'hint error'; if (response.ok) { $('loginPanel').style.display='none'; $('dashboard').style.display='block'; loadDashboard(); } });
+    $('refresh').addEventListener('click', loadDashboard);
+    $('reset').addEventListener('click', async () => { if (!confirm('Wirklich alle gespeicherten Login-Ereignisse löschen?')) return; const response = await fetch('/api/logs', { method:'DELETE' }); if (response.ok) { await loadDashboard(); } else { alert('Die Ereignisse konnten nicht zurückgesetzt werden.'); } });
+  </script>
+</body>
+</html>
